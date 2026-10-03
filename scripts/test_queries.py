@@ -1,7 +1,9 @@
 import sqlite3
 import pandas as pd
 
-conn = sqlite3.connect("db/football.db")
+from config import DB_PATH
+
+conn = sqlite3.connect(DB_PATH)
 pd.set_option("display.max_columns", None)
 pd.set_option("display.width", 200)
 
@@ -20,7 +22,7 @@ ORDER BY pv.market_value_in_eur DESC
 LIMIT 10
 """
 
-# Top scoring clubs in 2-23
+# Top scoring clubs in 2023/24
 query2 = """
 SELECT c.name AS club, comp.name AS league, SUM(a.goals) AS total_goals
 FROM appearances a
@@ -33,7 +35,7 @@ ORDER BY total_goals DESC
 LIMIT 15
 """
 
-# Most expensive transfers (between 2020 and 2025)
+# Most expensive transfers
 query3 = """
 SELECT p.name, cf.name AS from_club, ct.name AS to_club, t.transfer_fee, t.transfer_date
 FROM transfers t

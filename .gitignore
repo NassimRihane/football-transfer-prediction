@@ -224,3 +224,6 @@ data/raw/
 data/processed/
 .env
 __pycache__/
+# macOS and SeleniumBase (used by soccerdata for FBref)
+.DS_Store
+downloaded_files/

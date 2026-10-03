@@ -1,40 +1,29 @@
 # scripts/diagnose_club_names.py
+"""Suggest Transfermarkt clubs for the source clubs that could not be matched.
+
+Reads the *_unmatched_clubs.csv files written by the fetch_*_stats.py scripts. Add the
+right suggestion to CLUB_ALIASES in matching.py, then rerun the fetch script.
+"""
 import sqlite3
+
 import pandas as pd
-from rapidfuzz import process, fuzz
-import unicodedata
+from rapidfuzz import fuzz, process
 
-DB_PATH = "db/football.db"
-
-def normalize_name(name: str) -> str:
-    name = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode()
-    return name.lower().strip()
-
-STOPWORDS = {"de", "fc", "cf", "afc", "cd", "ud", "sc", "ac", "the", "club"}
-
-def normalize_club_name(name: str) -> str:
-    name = normalize_name(name)
-    tokens = [t for t in name.split() if t not in STOPWORDS]
-    return " ".join(tokens)
-
-# Colle ici la liste "Clubs with no correspondance" de ta dernière exécution,
-# juste les noms de clubs (sans la saison, puisqu'ils sont tous en "1920")
-UNMATCHED_FBREF_CLUBS = [
-    "Bologna", "Bordeaux", "Rennes", "Valladolid"
-]
+from config import DB_PATH, PROCESSED_DIR
+from matching import normalize_club_name, source_club_key
 
 conn = sqlite3.connect(DB_PATH)
-sql_clubs = pd.read_sql("SELECT DISTINCT name FROM clubs", conn)
-sql_clubs["name_norm"] = sql_clubs["name"].apply(normalize_club_name)
-
-for fbref_name in UNMATCHED_FBREF_CLUBS:
-    fbref_norm = normalize_club_name(fbref_name)
-    top3 = process.extract(
-        fbref_norm, sql_clubs["name_norm"], scorer=fuzz.WRatio, limit=3
-    )
-    print(f"\nFBref: '{fbref_name}' (normalisé: '{fbref_norm}')")
-    for match_norm, score, idx in top3:
-        original_name = sql_clubs.iloc[idx]["name"]
-        print(f"   -> '{original_name}' (score: {score:.0f})")
-
+tm_clubs = pd.read_sql("SELECT DISTINCT name FROM clubs", conn)
 conn.close()
+tm_clubs["name_norm"] = tm_clubs["name"].map(normalize_club_name)
+
+for path in sorted(PROCESSED_DIR.glob("*_unmatched_clubs.csv")):
+    unmatched = pd.read_csv(path)
+    if unmatched.empty:
+        continue
+    print(f"== {path.name}")
+    for team in unmatched["team"].unique():
+        key = source_club_key(team)
+        print(f"\n'{team}' (normalized: '{key}')")
+        for match_norm, score, idx in process.extract(key, tm_clubs["name_norm"], scorer=fuzz.WRatio, limit=3):
+            print(f"   -> '{tm_clubs.iloc[idx]['name']}' (alias value: '{match_norm}', score: {score:.0f})")

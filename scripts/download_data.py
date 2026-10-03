@@ -1,10 +1,15 @@
-import kagglehub
+# scripts/download_data.py
+"""Download the Transfermarkt dataset from Kaggle into data/raw."""
 import shutil
-import os
+from pathlib import Path
 
-path = kagglehub.dataset_download("davidcariboo/player-scores")
-print("Dled in :", path)
+import kagglehub
 
-os.makedirs("data/raw", exist_ok=True)
-for f in os.listdir(path):
-    shutil.copy(os.path.join(path, f), "data/raw")
+from config import RAW_DIR
+
+path = Path(kagglehub.dataset_download("davidcariboo/player-scores"))
+print("Downloaded to:", path)
+
+RAW_DIR.mkdir(parents=True, exist_ok=True)
+for f in path.iterdir():
+    shutil.copy(f, RAW_DIR)
