@@ -227,3 +227,5 @@ __pycache__/
 # macOS and SeleniumBase (used by soccerdata for FBref)
 .DS_Store
 downloaded_files/
+
+reports/
